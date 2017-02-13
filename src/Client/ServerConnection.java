@@ -81,7 +81,11 @@ public class ServerConnection {
 		}
 		// Un-marshals message and put in inString
 		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
-
+		if(inString.startsWith("ack")){
+			for(int i = 0; i < notSentMsg.size(); i++){
+				if(notSentMsg.get(i).)
+			}
+		}
 		return inString;
 	}
 
