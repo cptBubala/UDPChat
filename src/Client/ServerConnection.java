@@ -90,7 +90,20 @@ public class ServerConnection {
 		double failure = generator.nextDouble();
 		DatagramPacket outPacket = null;
 		
-		if (failure > TRANSMISSION_FAILURE_RATE) {
+		if(isHandshake){
+			outPacket = new DatagramPacket(message.getBytes(), message.getBytes().length, m_serverAddress,
+					m_serverPort);
+			System.out.println("is handshake");
+			try {
+				m_socket.send(outPacket);
+				System.out.println("handshake sent");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		if (failure > TRANSMISSION_FAILURE_RATE && isHandshake == false) {
 			// Marshals message to outPacket
 			outPacket = new DatagramPacket(message.getBytes(), message.getBytes().length, m_serverAddress,
 					m_serverPort);
