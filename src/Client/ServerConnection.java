@@ -74,6 +74,7 @@ public class ServerConnection {
 		}
 	}
 
+	// Receives messages
 	public String receiveChatMessage() {
 		// Receives message from server and puts in inPacket
 		DatagramPacket inPacket;
@@ -87,37 +88,32 @@ public class ServerConnection {
 			e.printStackTrace();
 		}
 		// Un-marshals message and put in inString
-		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
-		if(inString.startsWith("ack")){
-			System.out.println("Received ack!");
-			String[] inArray = inString.split(" ");
-			
-			for(int i = 0; i < sentMsg.size(); i++){
-				String[] sentArray = sentMsg.get(i).split(" ");
-				if(inArray[inArray.length-1].equals(sentArray[sentArray.length-1])){
-					sentMsg.remove(i);
-					System.out.println("Removed from array");
-					inString = "";
-				}
-			}
-		}else{
-			sendChatMessage("ack", true);
-		}
-		
+		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();	
 		return inString;
 	}
 
+	// Sends message and adds it to arraylist
 	public void sendChatMessage(String message, boolean first) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		String msg = "";
 		if (failure > TRANSMISSION_FAILURE_RATE) {
-			msg = message;
+			if(first){
+				msg = message + " " + System.currentTimeMillis();
+			}else{
+				msg = message;
+			}
+			
 			// Marshals message to outPacket
 			DatagramPacket outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_serverAddress,
 					m_serverPort);
 			try {
-				m_socket.send(outPacket);				
+				m_socket.send(outPacket);
+				if(first){
+					sentMsg.add(msg);
+					System.out.println("Added to senMsg");
+				}
+				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -133,10 +129,31 @@ public class ServerConnection {
 			}
 
 		} else {
-			sentMsg.add(message);
-			System.out.println("Message lost in cyber.. ");
+			if(first){
+				sentMsg.add(msg);
+				System.out.println("Added to senMsg");
+				System.out.println("Message lost in cyber.. ");
+			}
+			
 		}
 
+	}
+	
+	public void removeMessages(String message){
+		String[] inMsg = message.split(" ");
+		for(int i = 0; i < sentMsg.size(); i++){
+			String[] sentMsgArray = sentMsg.get(i).split(" ");
+			if(sentMsgArray[sentMsgArray.length-1].equals(inMsg[inMsg.length-1])){
+				sentMsg.remove(i);
+				break;
+			}
+		}
+	}
+	
+	public void resendMsg(){
+		for(int i = 0; i < sentMsg.size(); i++){
+			sendChatMessage(sentMsg.get(i), false);
+		}
 	}
 	
 	private void sendAgain(){
