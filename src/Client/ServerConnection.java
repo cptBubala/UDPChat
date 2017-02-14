@@ -25,7 +25,7 @@ public class ServerConnection {
 	private DatagramSocket m_socket = null;
 	private InetAddress m_serverAddress = null;
 	private int m_serverPort = -1;
-	private ArrayList<DatagramPacket> notSentMsg = new ArrayList<DatagramPacket>();
+	private ArrayList<String> sentMsg = new ArrayList<String>();
 
 	public ServerConnection(String hostName, int port) {
 		m_serverPort = port;
@@ -54,7 +54,13 @@ public class ServerConnection {
 	// via socket in method sendChatMessage
 	public boolean handshake(String name) {
 		String _outString = "0 " + name;
-		sendChatMessage(_outString, true);
+		DatagramPacket outPacket = new DatagramPacket(_outString.getBytes(), _outString.getBytes().length, m_serverAddress, m_serverPort);
+		try {
+			m_socket.send(outPacket);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		// If connection successful receiveChatMessage returns string "True" and
 		// handshake returns true
@@ -75,6 +81,7 @@ public class ServerConnection {
 		inPacket = new DatagramPacket(m_buf, m_buf.length);
 		try {
 			m_socket.receive(inPacket);
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -82,37 +89,39 @@ public class ServerConnection {
 		// Un-marshals message and put in inString
 		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
 		if(inString.startsWith("ack")){
-			for(int i = 0; i < notSentMsg.size(); i++){
-				if(notSentMsg.get(i).)
+			for(int i = 0; i < sentMsg.size(); i++){
+				String[] inArray = inString.split(" ");
+				String[] sentMsgArray = sentMsg.get(i).split(" ");
+				if (inArray[inArray.length-1].equals(sentMsgArray[sentMsgArray.length-1])) {
+					System.out.println("Match! Removes.");
+					sentMsg.remove(i);
+				}
 			}
+		}else{
+			sendChatMessage("ack", true);
 		}
 		return inString;
 	}
 
-	public void sendChatMessage(String message, boolean isHandshake) {
+	public void sendChatMessage(String message, boolean first) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
-		DatagramPacket outPacket = null;
-		
-		if(isHandshake){
-			outPacket = new DatagramPacket(message.getBytes(), message.getBytes().length, m_serverAddress,
-					m_serverPort);
-			System.out.println("is handshake");
-			try {
-				m_socket.send(outPacket);
-				System.out.println("handshake sent");
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		String msg = "";
+		if (failure > TRANSMISSION_FAILURE_RATE) {
+			if(first){
+				long millis = System.currentTimeMillis();
+				msg = message + " " + millis;
+			}else{
+				msg = message;
 			}
-		}
-		
-		if (failure > TRANSMISSION_FAILURE_RATE && isHandshake == false) {
+			
 			// Marshals message to outPacket
-			outPacket = new DatagramPacket(message.getBytes(), message.getBytes().length, m_serverAddress,
+			DatagramPacket outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_serverAddress,
 					m_serverPort);
 			try {
 				m_socket.send(outPacket);
+				sentMsg.add(message);
+				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -129,11 +138,24 @@ public class ServerConnection {
 
 		} else {
 			
-			notSentMsg.add(outPacket);
+			sendAgain();
 			//sendChatMessage(message);
-			System.out.println("Message lost in cyber.. " + notSentMsg.size());
+			System.out.println("Message lost in cyber.. ");
 		}
 
+	}
+	
+	private void sendAgain(){
+		System.out.println("in sendAgain - size of sentMsg " + sentMsg.size());
+		while(sentMsg.size() > 0){
+			for(int i = 0; i < sentMsg.size(); i++){
+				String resend = sentMsg.get(i);
+				sentMsg.remove(i);
+				sendChatMessage(resend, false);
+				System.out.println("in sendAgain for-loop: " + resend);
+				//System.exit(0);
+			}
+		}		
 	}
 
 }

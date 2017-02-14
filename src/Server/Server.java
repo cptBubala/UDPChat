@@ -58,6 +58,7 @@ public class Server {
 
 	private void listenForClientMessages() {
 		System.out.println("Waiting for client messages... ");
+		
 		// Sets a resonable size of the buffer
 		byte[] m_buf = new byte[2000];
 		// for un-marshalling
@@ -125,6 +126,11 @@ public class Server {
 			String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
 			// Put inString in the array, splits at, and removes, space
 			String[] _inStringArray = inString.split("\\s+");
+			
+			if(inString.startsWith("ack")){
+				ClientConnection.checkMsg(inString);
+			}
+			
 
 			/******* CHECKS IF CLIENTS ANSWERS THAT THEY ARE ALIVE *******/
 
@@ -184,9 +190,9 @@ public class Server {
 			// if _inStringArray[0] equals 2 this means that the received
 			// message is private
 			if (_inStringArray[0].equals("2") && checkMsgReceived) {
-				_outString = "ack " + _outString;
+				_outString = "ack" + " " + _outString;
 				System.out.print(_outString);
-				sendPrivateMessage(_outString, _inStringArray[1]);
+				broadcast(_outString);
 				ClientConnection c;
 				for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
 					c = itr.next();
@@ -207,7 +213,8 @@ public class Server {
 						for (int i = 4; i < _inStringArray.length; i++) {
 							ownString += _inStringArray[i] + " ";
 						}
-						// Send private message to it self, so it can show it on
+						// Send private message to it self, so it can show
+						// it on
 						// chat window
 						sendPrivateMessage(ownString, _inStringArray[1]);
 					}
@@ -219,7 +226,9 @@ public class Server {
 
 			// "1" means broadcast
 			else if (_inStringArray[0].equals("1") && checkMsgReceived) {
-				
+				_outString = "ack" + " " + _outString;
+				System.out.print(_outString);
+				broadcast(_outString);
 				for (int i = 0; i < m_connectedClients.size(); i++) {
 					if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 						// Gets the sender so it is possible to set its
@@ -239,6 +248,9 @@ public class Server {
 
 			// "3" means that the message is a /list-request
 			else if (_inStringArray[0].equals("3") && checkMsgReceived) {
+				_outString = "ack" + " " + _outString;
+				System.out.print(_outString);
+				broadcast(_outString);
 				for (int i = 0; i < m_connectedClients.size(); i++) {
 					if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 						// Gets the sender so it is possible to set its
@@ -253,7 +265,7 @@ public class Server {
 					_outString = m_connectedClients.get(i).getName();
 					// Send each connectedClient back to the client who wrote
 					// /list
-					sendPrivateMessage(_outString, _inStringArray[1]);
+					sendPrivateMessage(_outString, _inStringArray[0]);
 				}
 			}
 
@@ -261,6 +273,9 @@ public class Server {
 
 			// "4" means /leave-request from client
 			else if (_inStringArray[0].equals("4") && checkMsgReceived) {
+				_outString = "ack" + " " + _outString;
+				System.out.print(_outString);
+				broadcast(_outString);
 				for (int i = 0; i < m_connectedClients.size(); i++) {
 					if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 						/*
@@ -306,7 +321,7 @@ public class Server {
 			// If name in argument exists in connectedClients - it is possible
 			// to send private message to said client
 			if (c.hasName(name)) {
-				c.sendMessage(message, m_socket);
+				c.sendMessage(message, m_socket, true);
 			}
 		}
 	}
@@ -315,7 +330,7 @@ public class Server {
 	public void broadcast(String message) {
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
 			// Sends message to all clients in arraylist
-			itr.next().sendMessage(message, m_socket);
+			itr.next().sendMessage(message, m_socket, true);
 		}
 	}
 }

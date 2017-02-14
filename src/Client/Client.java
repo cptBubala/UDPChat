@@ -51,7 +51,7 @@ public class Client implements ActionListener {
 			// That means server wants to know if client still is connected
 			// Sends back "isAlive"
 			if (temp.equals("qAlive")) {
-				m_connection.sendChatMessage("isAlive", false);
+				m_connection.sendChatMessage("isAlive", true);
 			} else {
 				// If chat message is not "qAlive" this means it should be
 				// displayed in GUI
@@ -99,7 +99,7 @@ public class Client implements ActionListener {
 				outMsg = "1 " + m_name + " " + outMsg;
 			}
 
-			m_connection.sendChatMessage(outMsg, false);
+			m_connection.sendChatMessage(outMsg, true);
 			m_GUI.clearInput();
 		}
 
