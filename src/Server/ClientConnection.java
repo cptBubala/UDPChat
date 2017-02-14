@@ -65,7 +65,6 @@ public class ClientConnection {
 			//sendMessage(message, socket);
 			
 		}
-
 	}
 	
 	private void sendAgain(DatagramSocket socket){
