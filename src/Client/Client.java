@@ -52,7 +52,11 @@ public class Client implements ActionListener {
 			// Sends back "isAlive"
 			if (temp.equals("qAlive")) {
 				m_connection.sendChatMessage("isAlive", true);
-			} else {
+			}else if(temp.isEmpty()){
+				System.out.println("Listenforserver ack");
+			}
+			
+			else {
 				// If chat message is not "qAlive" this means it should be
 				// displayed in GUI
 				m_GUI.displayMessage(temp);

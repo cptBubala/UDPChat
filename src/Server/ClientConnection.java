@@ -39,26 +39,21 @@ public class ClientConnection {
 		String msg = "";
 
 		if (failure > TRANSMISSION_FAILURE_RATE) {
-			if(first){
-				long millis = System.currentTimeMillis();
-				msg = message + " " + millis;
-			}else{
-				msg = message;
-			}
 			
+			msg = message;
 			// Sends a message to client using socket. Marshalls the message
 			// by breaking it into bytes and put it in outPacket
 			outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_address, m_port);
 			try {
 				socket.send(outPacket);
-				sentMsg.add(message);
+				//sentMsg.add(message);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
 		} else {
-			sendAgain(socket);
+			sendMessage(msg, socket, false);
 			// Message got lost
 			System.out.println("Message lost in cyberspace.. " + sentMsg.size());
 			// Calls method again because the message was lost

@@ -89,17 +89,21 @@ public class ServerConnection {
 		// Un-marshals message and put in inString
 		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
 		if(inString.startsWith("ack")){
+			System.out.println("Received ack!");
+			String[] inArray = inString.split(" ");
+			
 			for(int i = 0; i < sentMsg.size(); i++){
-				String[] inArray = inString.split(" ");
-				String[] sentMsgArray = sentMsg.get(i).split(" ");
-				if (inArray[inArray.length-1].equals(sentMsgArray[sentMsgArray.length-1])) {
-					System.out.println("Match! Removes.");
+				String[] sentArray = sentMsg.get(i).split(" ");
+				if(inArray[inArray.length-1].equals(sentArray[sentArray.length-1])){
 					sentMsg.remove(i);
+					System.out.println("Removed from array");
+					inString = "";
 				}
 			}
 		}else{
 			sendChatMessage("ack", true);
 		}
+		
 		return inString;
 	}
 
@@ -108,20 +112,12 @@ public class ServerConnection {
 		double failure = generator.nextDouble();
 		String msg = "";
 		if (failure > TRANSMISSION_FAILURE_RATE) {
-			if(first){
-				long millis = System.currentTimeMillis();
-				msg = message + " " + millis;
-			}else{
-				msg = message;
-			}
-			
+			msg = message;
 			// Marshals message to outPacket
 			DatagramPacket outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_serverAddress,
 					m_serverPort);
 			try {
-				m_socket.send(outPacket);
-				sentMsg.add(message);
-				
+				m_socket.send(outPacket);				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -137,9 +133,7 @@ public class ServerConnection {
 			}
 
 		} else {
-			
-			sendAgain();
-			//sendChatMessage(message);
+			sentMsg.add(message);
 			System.out.println("Message lost in cyber.. ");
 		}
 

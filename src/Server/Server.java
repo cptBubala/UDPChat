@@ -127,9 +127,9 @@ public class Server {
 			// Put inString in the array, splits at, and removes, space
 			String[] _inStringArray = inString.split("\\s+");
 			
-			if(inString.startsWith("ack")){
+			/*if(inString.startsWith("ack")){
 				ClientConnection.checkMsg(inString);
-			}
+			}*/
 			
 
 			/******* CHECKS IF CLIENTS ANSWERS THAT THEY ARE ALIVE *******/
