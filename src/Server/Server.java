@@ -144,6 +144,10 @@ public class Server {
 					}
 				}
 			}
+			
+			if(_inStringArray[0].equals("ack") && checkMsgReceived){
+				ClientConnection.removeMsg(inString);
+			}
 
 			/********** HANDSHAKE **********/
 
@@ -226,9 +230,10 @@ public class Server {
 
 			// "1" means broadcast
 			else if (_inStringArray[0].equals("1") && checkMsgReceived) {
-				_outString = "ack" + " " + _outString;
+				String ack_outString = "ack" + " " + _outString;
+				broadcast(ack_outString);
 				System.out.print(_outString);
-				broadcast(_outString);
+				//broadcast(_outString);
 				for (int i = 0; i < m_connectedClients.size(); i++) {
 					if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 						// Gets the sender so it is possible to set its
@@ -294,8 +299,39 @@ public class Server {
 			} else {
 
 			}
+			
+			timeElapsed = System.currentTimeMillis() - millis;
+			if(timeElapsed > 500){
+				millis = System.currentTimeMillis();
+				resendMsg(m_socket);
+			}
 
 		} while (true);
+	}
+	
+	public void removeMessages(String message){
+		String[] inMsg = message.split(" ");
+		for(int i = 0; i < ClientConnection.sentMsg.size(); i++){
+			String[] sentMsgArray = ClientConnection.sentMsg.get(i).split(" ");
+			if(sentMsgArray[sentMsgArray.length-1].equals(inMsg[inMsg.length-1])){
+				System.out.println("Size " + ClientConnection.sentMsg.size());
+				System.out.println("Removed msg " + ClientConnection.sentMsg.size());
+				ClientConnection.sentMsg.remove(i);
+				break;
+			}
+		}
+	}
+	
+	public void resendMsg(DatagramSocket socket){
+		for(int i = 0; i < ClientConnection.sentMsg.size(); i++){
+			ClientConnection c;
+			for(Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();){
+				c = itr.next();
+				System.out.println("in resendmsg " + ClientConnection.sentMsg.get(i));
+				c.sendMessage(ClientConnection.sentMsg.get(i), socket, false);
+			}
+			
+		}
 	}
 
 	// Used to add new client to arraylist
@@ -330,7 +366,9 @@ public class Server {
 	public void broadcast(String message) {
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
 			// Sends message to all clients in arraylist
+			System.out.println("BROADCAST " + message);
 			itr.next().sendMessage(message, m_socket, true);
+			
 		}
 	}
 }

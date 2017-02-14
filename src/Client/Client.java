@@ -46,24 +46,28 @@ public class Client implements ActionListener {
 		}
 	}
 
+	// ENDA HÄR ÄR SKRIVA UT MEDDELANDE I FÖNSTER - ALLT ANNAT FIXAS I RECEIVECHATMESSAGE()
 	private void listenForServerMessages() {
 		do {		
 			String temp = m_connection.receiveChatMessage();
-			// Receives chat message and checks if it equals "qAlive"
-			// That means server wants to know if client still is connected
-			// Sends back "isAlive"
-			if (temp.equals("qAlive")) {
-				m_connection.sendChatMessage("isAlive", true);
+			String[] newStringArray = temp.split(" ");
+			String newString ="";
+			if(temp.isEmpty()){
+				//do nothing
 			}else if(temp.startsWith("ack")){
-				m_connection.removeMessages(temp);
+				// do nada
+			}
+			else{
+				
+
+				for(int i = 0; i < newStringArray.length - 1;i++){
+					newString = newString + newStringArray[i] + " ";
+				}
+				System.out.println("newstring is " + newString);
+				
 			}
 			
-			else {
-				// If chat message is not "qAlive" this means it should be
-				// displayed in GUI
-				m_GUI.displayMessage(temp);
-			}
-			
+			m_GUI.displayMessage(newString);
 			timeElapsed = System.currentTimeMillis() - millis;
 			if(timeElapsed > 500){
 				millis = System.currentTimeMillis();

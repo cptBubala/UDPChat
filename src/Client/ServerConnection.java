@@ -20,7 +20,7 @@ import java.util.Random;
 public class ServerConnection {
 
 	// Artificial failure rate of 30% packet loss
-	static double TRANSMISSION_FAILURE_RATE = 0.3;
+	static double TRANSMISSION_FAILURE_RATE = 0.1;
 
 	private DatagramSocket m_socket = null;
 	private InetAddress m_serverAddress = null;
@@ -54,7 +54,8 @@ public class ServerConnection {
 	// via socket in method sendChatMessage
 	public boolean handshake(String name) {
 		String _outString = "0 " + name;
-		DatagramPacket outPacket = new DatagramPacket(_outString.getBytes(), _outString.getBytes().length, m_serverAddress, m_serverPort);
+		DatagramPacket outPacket = new DatagramPacket(_outString.getBytes(), _outString.getBytes().length,
+				m_serverAddress, m_serverPort);
 		try {
 			m_socket.send(outPacket);
 		} catch (IOException e) {
@@ -82,14 +83,48 @@ public class ServerConnection {
 		inPacket = new DatagramPacket(m_buf, m_buf.length);
 		try {
 			m_socket.receive(inPacket);
-			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		// Un-marshals message and put in inString
-		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();	
+		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
+		inString = controlMsg(inString);
 		return inString;
+	}
+
+	private String controlMsg(String inString) {
+		String[] inArray = inString.split(" ");
+		String controlledMsg = "";
+		if (inArray.length > 1) {
+			if (inArray[1].equals("ack")) {
+				System.out.println("in controlmsg rmove");
+				removeMessages(inString);
+				controlledMsg = "";
+			} else if (inArray[1].equals("qAlive")) {
+				sendChatMessage("isAlive", true);
+				controlledMsg = "";
+			}else{
+				controlledMsg = inString;
+				String ackMsg = "ack" + " " + inString;
+				sendChatMessage(ackMsg, true);
+			}
+		} else {
+			if (inArray[0].equals("ack")) {
+				System.out.println("in controlmsg rmove");
+				removeMessages(inString);
+				controlledMsg = "";
+			} else if (inArray[0].equals("qAlive")) {
+				sendChatMessage("isAlive", true);
+				controlledMsg = "";
+			}else{
+				controlledMsg = inString;
+				String ackMsg = "ack" + " " + inString;
+				sendChatMessage(ackMsg, true);
+			}
+		}
+
+		return controlledMsg;
 	}
 
 	// Sends message and adds it to arraylist
@@ -98,22 +133,28 @@ public class ServerConnection {
 		double failure = generator.nextDouble();
 		String msg = "";
 		if (failure > TRANSMISSION_FAILURE_RATE) {
-			if(first){
+			if (first) {
 				msg = message + " " + System.currentTimeMillis();
-			}else{
+			} else {
 				msg = message;
 			}
-			
+
 			// Marshals message to outPacket
 			DatagramPacket outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_serverAddress,
 					m_serverPort);
 			try {
 				m_socket.send(outPacket);
-				if(first){
+				boolean found = false;
+				for(int i = 0; i < sentMsg.size(); i++){
+					if(sentMsg.get(i).equals(msg)){
+						found = true;
+					}
+				}
+				if (!found) {
 					sentMsg.add(msg);
 					System.out.println("Added to senMsg");
 				}
-				
+
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -129,44 +170,40 @@ public class ServerConnection {
 			}
 
 		} else {
-			if(first){
+			msg = message;
+			boolean found = false;
+			for(int i = 0; i < sentMsg.size(); i++){
+				if(sentMsg.get(i).equals(msg)){
+					found = true;
+				}
+			}
+			if (!found) {
 				sentMsg.add(msg);
 				System.out.println("Added to senMsg");
 				System.out.println("Message lost in cyber.. ");
 			}
-			
+
 		}
 
 	}
-	
-	public void removeMessages(String message){
+
+	public void removeMessages(String message) {
 		String[] inMsg = message.split(" ");
-		for(int i = 0; i < sentMsg.size(); i++){
+		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
-			if(sentMsgArray[sentMsgArray.length-1].equals(inMsg[inMsg.length-1])){
+			if (sentMsgArray[sentMsgArray.length - 1].equals(inMsg[inMsg.length - 1])) {
+				System.out.println("Size " + sentMsg.size());
+				System.out.println("Removed msg " + sentMsg.size());
 				sentMsg.remove(i);
 				break;
 			}
 		}
 	}
-	
-	public void resendMsg(){
-		for(int i = 0; i < sentMsg.size(); i++){
+
+	public void resendMsg() {
+		for (int i = 0; i < sentMsg.size(); i++) {
 			sendChatMessage(sentMsg.get(i), false);
 		}
-	}
-	
-	private void sendAgain(){
-		System.out.println("in sendAgain - size of sentMsg " + sentMsg.size());
-		while(sentMsg.size() > 0){
-			for(int i = 0; i < sentMsg.size(); i++){
-				String resend = sentMsg.get(i);
-				sentMsg.remove(i);
-				sendChatMessage(resend, false);
-				System.out.println("in sendAgain for-loop: " + resend);
-				//System.exit(0);
-			}
-		}		
 	}
 
 }

@@ -17,13 +17,13 @@ import java.util.Random;
  */
 public class ClientConnection {
 
-	static double TRANSMISSION_FAILURE_RATE = 0.3;
+	static double TRANSMISSION_FAILURE_RATE = 0.1;
 
 	private final String m_name;
 	private final InetAddress m_address;
 	private final int m_port;
 	private boolean m_connected = false;
-	private static ArrayList<String> sentMsg = new ArrayList<String>();
+	static ArrayList<String> sentMsg = new ArrayList<String>();
 
 	public ClientConnection(String name, InetAddress address, int port) {
 		m_name = name;
@@ -39,49 +39,43 @@ public class ClientConnection {
 		String msg = "";
 
 		if (failure > TRANSMISSION_FAILURE_RATE) {
-			
-			msg = message;
+			if (first) {
+				msg = message + " " + System.currentTimeMillis();
+			} else {
+				msg = message;
+			}
 			// Sends a message to client using socket. Marshalls the message
 			// by breaking it into bytes and put it in outPacket
 			outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_address, m_port);
 			try {
 				socket.send(outPacket);
-				//sentMsg.add(message);
+				if(first){
+					sentMsg.add(message);
+				}
+				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
 		} else {
-			sendMessage(msg, socket, false);
-			// Message got lost
-			System.out.println("Message lost in cyberspace.. " + sentMsg.size());
-			// Calls method again because the message was lost
-			//sendMessage(message, socket);
-			
+			msg = message;
+			if (first) {
+				sentMsg.add(msg);
+				System.out.println("Message lost in cyber.. ");
+			}
+
 		}
 
 	}
-	
-	private void sendAgain(DatagramSocket socket){
-		System.out.println("in sendAgain - size of sentMsg " + sentMsg.size());
-		while(sentMsg.size() > 0){
-			for(int i = 0; i < sentMsg.size(); i++){
-				String resend = sentMsg.get(i);
-				sentMsg.remove(i);
-				sendMessage(resend, socket, false);
-				System.out.println("in sendAgain for-loop: " + resend);
-				//System.exit(0);
-			}
-		}
-	}
-	
-	public static void checkMsg(String instring){
-		for(int i = 0; i < sentMsg.size(); i++){
+
+	public static void removeMsg(String instring) {
+		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] inArray = instring.split(" ");
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
+			System.out.println("Size of array " + sentMsg.size());
 			if (inArray[0].equals(sentMsgArray[0])) {
-				System.out.println("Match! Removes.");
+				System.out.println("Match! Removes. Size of array " + sentMsg.size());
 				sentMsg.remove(i);
 			}
 		}
