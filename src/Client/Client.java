@@ -48,6 +48,8 @@ public class Client implements ActionListener {
 
 	// ENDA HÄR ÄR SKRIVA UT MEDDELANDE I FÖNSTER - ALLT ANNAT FIXAS I RECEIVECHATMESSAGE()
 	private void listenForServerMessages() {
+		//gör en lista där allt samlas som sen kan kollas innan det visas
+		
 		do {		
 			String temp = m_connection.receiveChatMessage();
 			String[] newStringArray = temp.split(" ");
@@ -64,12 +66,12 @@ public class Client implements ActionListener {
 					newString = newString + newStringArray[i] + " ";
 				}
 				System.out.println("newstring is " + newString);
-				
+				m_GUI.displayMessage(newString);
 			}
 			
-			m_GUI.displayMessage(newString);
+			
 			timeElapsed = System.currentTimeMillis() - millis;
-			if(timeElapsed > 500){
+			if(timeElapsed > 1000){
 				millis = System.currentTimeMillis();
 				m_connection.resendMsg();
 			}

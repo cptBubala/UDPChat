@@ -47,6 +47,15 @@ public class ServerConnection {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		try {
+			// Used for socket-time out
+			// Stops receiving after 5 sec and moves on
+			m_socket.setSoTimeout(5000);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
@@ -81,15 +90,22 @@ public class ServerConnection {
 		DatagramPacket inPacket;
 		byte[] m_buf = new byte[2000];
 		inPacket = new DatagramPacket(m_buf, m_buf.length);
+		
+		boolean checkMsgReceived = false;
 		try {
 			m_socket.receive(inPacket);
+			checkMsgReceived = true;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			checkMsgReceived = false;
 		}
 		// Un-marshals message and put in inString
-		String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
-		inString = controlMsg(inString);
+		String inString = "";
+		if(checkMsgReceived){
+			inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
+			inString = controlMsg(inString);
+		}else{
+			inString = "";
+		}
 		return inString;
 	}
 
@@ -97,11 +113,24 @@ public class ServerConnection {
 		String[] inArray = inString.split(" ");
 		String controlledMsg = "";
 		if (inArray.length > 1) {
-			if (inArray[1].equals("ack")) {
+			if (inArray[0].equals("ack")) {
 				System.out.println("in controlmsg rmove");
 				removeMessages(inString);
 				controlledMsg = "";
-			} else if (inArray[1].equals("qAlive")) {
+			}else if (inArray[1].equals("ack")) {
+				System.out.println("in controlmsg rmove");
+				removeMessages(inString);
+				controlledMsg = "";
+			}
+			
+		if(inArray.length > 2){
+			if (inArray[2].equals("ack")) {
+				System.out.println("in controlmsg rmove");
+				removeMessages(inString);
+				controlledMsg = "";
+			}
+		}	
+			if (inArray[1].equals("qAlive")) {
 				sendChatMessage("isAlive", true);
 				controlledMsg = "";
 			}else{
@@ -109,12 +138,13 @@ public class ServerConnection {
 				String ackMsg = "ack" + " " + inString;
 				sendChatMessage(ackMsg, true);
 			}
-		} else {
+		}		
+		else {
 			if (inArray[0].equals("ack")) {
 				System.out.println("in controlmsg rmove");
 				removeMessages(inString);
 				controlledMsg = "";
-			} else if (inArray[0].equals("qAlive")) {
+			}else if (inArray[0].equals("qAlive")) {
 				sendChatMessage("isAlive", true);
 				controlledMsg = "";
 			}else{
@@ -123,12 +153,11 @@ public class ServerConnection {
 				sendChatMessage(ackMsg, true);
 			}
 		}
-
 		return controlledMsg;
 	}
 
 	// Sends message and adds it to arraylist
-	public void sendChatMessage(String message, boolean first) {
+	public synchronized void sendChatMessage(String message, boolean first) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		String msg = "";
@@ -187,7 +216,7 @@ public class ServerConnection {
 
 	}
 
-	public void removeMessages(String message) {
+	public synchronized void removeMessages(String message) {
 		String[] inMsg = message.split(" ");
 		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
@@ -200,7 +229,7 @@ public class ServerConnection {
 		}
 	}
 
-	public void resendMsg() {
+	public synchronized void resendMsg() {
 		for (int i = 0; i < sentMsg.size(); i++) {
 			sendChatMessage(sentMsg.get(i), false);
 		}

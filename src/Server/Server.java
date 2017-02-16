@@ -20,7 +20,11 @@ public class Server {
 	private DatagramSocket m_socket;
 	private long millis;
 	private long timeElapsed;
+	private long msg_millis;
+	private long msg_timeElapsed;
+	
 	private ArrayList<String> sentMsgArray = new ArrayList<String>();
+	
 
 	public static void main(String[] args) {
 		if (args.length < 1) {
@@ -54,6 +58,7 @@ public class Server {
 			e.printStackTrace();
 		}
 		millis = System.currentTimeMillis();
+		msg_millis = System.currentTimeMillis();
 	}
 
 	private void listenForClientMessages() {
@@ -126,7 +131,11 @@ public class Server {
 			String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
 			// Put inString in the array, splits at, and removes, space
 			String[] _inStringArray = inString.split("\\s+");
-			
+			for(int i = 0; i < m_connectedClients.size();i++){
+				if(m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())){
+					m_connectedClients.get(i).addMsgToArray(inString);
+				}
+			}
 			/*if(inString.startsWith("ack")){
 				ClientConnection.checkMsg(inString);
 			}*/
@@ -144,6 +153,8 @@ public class Server {
 					}
 				}
 			}
+			
+			/********** REMOVE ACK *********/
 			
 			if(_inStringArray[0].equals("ack") && checkMsgReceived){
 				ClientConnection.removeMsg(inString);
@@ -196,6 +207,9 @@ public class Server {
 			if (_inStringArray[0].equals("2") && checkMsgReceived) {
 				_outString = "ack" + " " + _outString;
 				System.out.print(_outString);
+				/*for(int i = 0; i < allMessages.size(); i++){
+					if(allMessages.get(i))
+				}*/
 				broadcast(_outString);
 				ClientConnection c;
 				for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
@@ -232,7 +246,7 @@ public class Server {
 			else if (_inStringArray[0].equals("1") && checkMsgReceived) {
 				String ack_outString = "ack" + " " + _outString;
 				broadcast(ack_outString);
-				System.out.print(_outString);
+				System.out.print("This is in outstring " + _outString);
 				//broadcast(_outString);
 				for (int i = 0; i < m_connectedClients.size(); i++) {
 					if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
@@ -245,8 +259,20 @@ public class Server {
 				for (int i = 2; i < _inStringArray.length; i++) {
 					_outString += _inStringArray[i] + " ";
 				}
-				// Broadcasts the message to all client
-				broadcast(_inStringArray[1] + ": " + _outString);
+				
+				
+				for(int i = allMessages.size()-1; i < allMessages.size(); i++){
+					String tempArr[] = sentMsg.get(i).split(" ");
+					System.out.println("Last index of tempArr " + tempArr[tempArr.length-1]);
+					String Arr[] = allMessages.get(i).split(" ");
+					System.out.println("Arr is: " + Arr[Arr.length-1]);
+					if(!Arr[i].equals(tempArr[tempArr.length-1])){
+						// Broadcasts the message to all client
+						broadcast(_inStringArray[1] + ": " + _outString);
+					}
+				}
+				
+				
 			}
 
 			/******** LIST PARTICIPANTS ********/
@@ -300,9 +326,9 @@ public class Server {
 
 			}
 			
-			timeElapsed = System.currentTimeMillis() - millis;
-			if(timeElapsed > 500){
-				millis = System.currentTimeMillis();
+			msg_timeElapsed = System.currentTimeMillis() - msg_millis;
+			if(msg_timeElapsed > 500){
+				msg_millis = System.currentTimeMillis();
 				resendMsg(m_socket);
 			}
 

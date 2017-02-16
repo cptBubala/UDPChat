@@ -23,8 +23,9 @@ public class ClientConnection {
 	private final InetAddress m_address;
 	private final int m_port;
 	private boolean m_connected = false;
-	static ArrayList<String> sentMsg = new ArrayList<String>();
-
+	ArrayList<String> sentMsg = new ArrayList<String>();
+	private ArrayList<String> allMessages = new ArrayList<String>();
+	
 	public ClientConnection(String name, InetAddress address, int port) {
 		m_name = name;
 		m_address = address;
@@ -69,7 +70,7 @@ public class ClientConnection {
 
 	}
 
-	public static void removeMsg(String instring) {
+	public void removeMsg(String instring) {
 		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] inArray = instring.split(" ");
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
@@ -79,6 +80,10 @@ public class ClientConnection {
 				sentMsg.remove(i);
 			}
 		}
+	}
+	
+	public void addMsgToArray(String msg){
+		allMessages.add(msg);
 	}
 
 	public boolean hasName(String testName) {
