@@ -25,7 +25,7 @@ public class ClientConnection {
 	private boolean m_connected = false;
 	ArrayList<String> sentMsg = new ArrayList<String>();
 	private ArrayList<String> allMessages = new ArrayList<String>();
-	
+
 	public ClientConnection(String name, InetAddress address, int port) {
 		m_name = name;
 		m_address = address;
@@ -37,53 +37,94 @@ public class ClientConnection {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		DatagramPacket outPacket = null;
-		String msg = "";
-
+		String msg = message;
+		//String msg = prepareMsg(message);
+		String[] msgArray = msg.split(" ");
+		//System.out.println("THIS IS IN BEGINNING OF SENDMESSAGE " + msg);
+		String tempmsg = "";
+		
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			if (first) {
-				msg = message + " " + System.currentTimeMillis();
-			} else {
-				msg = message;
+				if(msgArray[0].equals("8") || msgArray[0].equals("9") || msgArray[0].equals("qAlive")){
+					tempmsg = msg;
+				}else{
+					for(int i = 0; i < msgArray.length-1; i++){
+						tempmsg += msgArray[i] + " ";
+					}
+				}
+				
+				msg = tempmsg + " " + System.currentTimeMillis();
+				//System.out.println("Msg in sendMessage: " + msg);
 			}
+
 			// Sends a message to client using socket. Marshalls the message
 			// by breaking it into bytes and put it in outPacket
 			outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_address, m_port);
 			try {
 				socket.send(outPacket);
-				if(first){
-					sentMsg.add(message);
+				boolean found = false;
+				for (int i = 0; i < sentMsg.size(); i++) {
+					if (sentMsg.get(i).equals(msg)) {
+						found = true;
+					}
 				}
-				
+				if (msgArray.length > 0) {
+					if (!found && !msgArray[0].equals("ack")) {
+						sentMsg.add(msg);
+						//System.out.println("Added to sentMsg-array in if: " + msg);
+					}
+				}
+
+				/*
+				 * if (first) { sentMsg.add(message); }
+				 */
+
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
 		} else {
-			msg = message;
-			if (first) {
-				sentMsg.add(msg);
-				System.out.println("Message lost in cyber.. ");
+			boolean found = false;
+			for (int i = 0; i < sentMsg.size(); i++) {
+				if (sentMsg.get(i).equals(msg)) {
+					found = true;
+				}
+			}
+			if (msgArray.length > 0) {
+				if (!found && !msgArray[0].equals("ack")) {
+					sentMsg.add(msg);
+					//System.out.println("Added to sentMsg-array in else: " + msg);
+					System.out.println("Message lost in cyber.. ");
+				}
 			}
 
 		}
 
 	}
 
-	public void removeMsg(String instring) {
-		for (int i = 0; i < sentMsg.size(); i++) {
-			String[] inArray = instring.split(" ");
-			String[] sentMsgArray = sentMsg.get(i).split(" ");
-			System.out.println("Size of array " + sentMsg.size());
-			if (inArray[0].equals(sentMsgArray[0])) {
-				System.out.println("Match! Removes. Size of array " + sentMsg.size());
-				sentMsg.remove(i);
-			}
-		}
-	}
-	
-	public void addMsgToArray(String msg){
+	public void addMsgToArray(String msg) {
 		allMessages.add(msg);
+	}
+
+	public void removeMessages(String message) {
+		String[] inMsg = message.split(" ");
+		for (int i = 0; i < sentMsg.size(); i++) {
+			// String[] sentMsgArray = sentMsg.get(i).split(" ");
+			if (sentMsg.get(i).endsWith(inMsg[inMsg.length - 1])) {
+				System.out.println("Sent msg " + sentMsg.get(i) + " and inMsgArray - " + inMsg[inMsg.length - 1]);
+				// System.out.println("Removed msg " + sentMsg.size() + " " +
+				// sentMsgArray[sentMsgArray.length-1]);
+				sentMsg.remove(i);
+				break;
+			}
+		}
+	}
+
+	public void resend(DatagramSocket socket) {
+		for (int i = 0; i < sentMsg.size(); i++) {
+			sendMessage(sentMsg.get(i), socket, false);
+		}
 	}
 
 	public boolean hasName(String testName) {

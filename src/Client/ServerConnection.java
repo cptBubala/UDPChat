@@ -26,6 +26,7 @@ public class ServerConnection {
 	private InetAddress m_serverAddress = null;
 	private int m_serverPort = -1;
 	private ArrayList<String> sentMsg = new ArrayList<String>();
+	private ArrayList<String> displayedMsg = new ArrayList<String>();
 
 	public ServerConnection(String hostName, int port) {
 		m_serverPort = port;
@@ -47,7 +48,7 @@ public class ServerConnection {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		try {
 			// Used for socket-time out
 			// Stops receiving after 5 sec and moves on
@@ -90,7 +91,7 @@ public class ServerConnection {
 		DatagramPacket inPacket;
 		byte[] m_buf = new byte[2000];
 		inPacket = new DatagramPacket(m_buf, m_buf.length);
-		
+
 		boolean checkMsgReceived = false;
 		try {
 			m_socket.receive(inPacket);
@@ -100,62 +101,48 @@ public class ServerConnection {
 		}
 		// Un-marshals message and put in inString
 		String inString = "";
-		if(checkMsgReceived){
+		if (checkMsgReceived) {
 			inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
-			inString = controlMsg(inString);
-		}else{
+			if (!inString.startsWith("ack")) {
+				sendAck(inString);
+			}
+			//inString = controlMsg(inString);
+		} 
+		
+		/*else {
 			inString = "";
-		}
-		return inString;
+		}*/
+		//System.out.println("Before returning inString in receiveChatMessage: " + inString);
+
+		String[] newStringArray = inString.split(" ");
+		/*
+		 * for(int i = 0; i < newStringArray.length - 1;i++){ newString =
+		 * newString + newStringArray[i] + " "; }
+		 */
+		//System.out.println("In receiveMsg: inString is " + inString);
+
+		/*String checkIfDisplayed = showMessage(inString);
+		for (int m = 0; m < displayedMsg.size(); m++) {
+			if (checkIfDisplayed.equals(displayedMsg.get(m))) {
+				System.out.println("Message already displayed " + checkIfDisplayed + " " + displayedMsg.get(m));
+				inString = "??=)!!";
+				break;
+			}
+		}*/
+
+		return inString; // fram hit verkar det fungera på första
+							// meddelandet att eerik has joined the chat.
+							// Sen bara ack?
 	}
 
-	private String controlMsg(String inString) {
-		String[] inArray = inString.split(" ");
-		String controlledMsg = "";
-		if (inArray.length > 1) {
-			if (inArray[0].equals("ack")) {
-				System.out.println("in controlmsg rmove");
-				removeMessages(inString);
-				controlledMsg = "";
-			}else if (inArray[1].equals("ack")) {
-				System.out.println("in controlmsg rmove");
-				removeMessages(inString);
-				controlledMsg = "";
-			}
-			
-		if(inArray.length > 2){
-			if (inArray[2].equals("ack")) {
-				System.out.println("in controlmsg rmove");
-				removeMessages(inString);
-				controlledMsg = "";
-			}
-		}	
-			if (inArray[1].equals("qAlive")) {
-				sendChatMessage("isAlive", true);
-				controlledMsg = "";
-			}else{
-				controlledMsg = inString;
-				String ackMsg = "ack" + " " + inString;
-				sendChatMessage(ackMsg, true);
-			}
-		}		
-		else {
-			if (inArray[0].equals("ack")) {
-				System.out.println("in controlmsg rmove");
-				removeMessages(inString);
-				controlledMsg = "";
-			}else if (inArray[0].equals("qAlive")) {
-				sendChatMessage("isAlive", true);
-				controlledMsg = "";
-			}else{
-				controlledMsg = inString;
-				String ackMsg = "ack" + " " + inString;
-				sendChatMessage(ackMsg, true);
-			}
+	private void sendAck(String msg) {
+		if (!msg.equals("True")) {
+			String tempMsg = "ack" + " " + msg;
+			//System.out.println("tempMsg in sendAck " + tempMsg);
+			sendChatMessage(tempMsg, false);
 		}
-		return controlledMsg;
 	}
-
+	
 	// Sends message and adds it to arraylist
 	public synchronized void sendChatMessage(String message, boolean first) {
 		Random generator = new Random();
@@ -167,21 +154,21 @@ public class ServerConnection {
 			} else {
 				msg = message;
 			}
-
+			String[] msgArray = msg.split(" ");
 			// Marshals message to outPacket
 			DatagramPacket outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_serverAddress,
 					m_serverPort);
 			try {
 				m_socket.send(outPacket);
 				boolean found = false;
-				for(int i = 0; i < sentMsg.size(); i++){
-					if(sentMsg.get(i).equals(msg)){
+				for (int i = 0; i < sentMsg.size(); i++) {
+					if (sentMsg.get(i).equals(msg)) {
 						found = true;
 					}
 				}
-				if (!found) {
+				if (!found && !msgArray[0].equals("ack")) {
 					sentMsg.add(msg);
-					System.out.println("Added to senMsg");
+					//System.out.println("Added to sentMsg-array in if: " + msg);
 				}
 
 			} catch (IOException e) {
@@ -195,20 +182,24 @@ public class ServerConnection {
 			// window
 			String[] _outMessageArray = message.split(" ");
 			if (_outMessageArray[0].equals("4")) {
+				//System.out.println("Size of sentMsg right before shutdown: " + sentMsg.size());
+				for (int i = 0; i < sentMsg.size(); i++) {
+					//System.out.println(sentMsg.get(i));
+				}
 				System.exit(0);
 			}
 
 		} else {
 			msg = message;
 			boolean found = false;
-			for(int i = 0; i < sentMsg.size(); i++){
-				if(sentMsg.get(i).equals(msg)){
+			for (int i = 0; i < sentMsg.size(); i++) {
+				if (sentMsg.get(i).equals(msg)) {
 					found = true;
 				}
 			}
 			if (!found) {
 				sentMsg.add(msg);
-				System.out.println("Added to senMsg");
+				//System.out.println("Added to sentMsg-array in else: " + msg);
 				System.out.println("Message lost in cyber.. ");
 			}
 
@@ -221,9 +212,9 @@ public class ServerConnection {
 		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
 			if (sentMsgArray[sentMsgArray.length - 1].equals(inMsg[inMsg.length - 1])) {
-				System.out.println("Size " + sentMsg.size());
+				System.out.println("Size " + sentMsg.size() + " msg to delete: " + sentMsg.get(i));
+				sentMsg.remove(i); // Seems to work
 				System.out.println("Removed msg " + sentMsg.size());
-				sentMsg.remove(i);
 				break;
 			}
 		}

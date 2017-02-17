@@ -1,6 +1,7 @@
 package Client;
 
 import java.awt.event.*;
+import java.util.ArrayList;
 
 public class Client implements ActionListener {
 
@@ -9,6 +10,8 @@ public class Client implements ActionListener {
 	private ServerConnection m_connection = null;
 	private long millis;
 	private long timeElapsed;
+	private ArrayList<String> receivedMsg = new ArrayList<String>();
+	
 	
 	public static void main(String[] args) {
 		if (args.length < 3) {
@@ -49,34 +52,73 @@ public class Client implements ActionListener {
 	// ENDA HÄR ÄR SKRIVA UT MEDDELANDE I FÖNSTER - ALLT ANNAT FIXAS I RECEIVECHATMESSAGE()
 	private void listenForServerMessages() {
 		//gör en lista där allt samlas som sen kan kollas innan det visas
+		String shownString = "";
 		
 		do {		
 			String temp = m_connection.receiveChatMessage();
-			String[] newStringArray = temp.split(" ");
-			String newString ="";
-			if(temp.isEmpty()){
-				//do nothing
-			}else if(temp.startsWith("ack")){
-				// do nada
-			}
-			else{
-				
-
-				for(int i = 0; i < newStringArray.length - 1;i++){
-					newString = newString + newStringArray[i] + " ";
+			String displayMsg = "";
+			//System.out.println("DISPLAY?? " + temp);
+			String[]splitMsg = temp.split(" ");
+			
+			// SPLIT MSG HERE? SO IT ONLY DISPLAYS VITAL INFO
+			
+			//String displayMsg = splitMsg[splitMsg.length-1];
+			//System.out.println("DISPLAY!! " + displayMsg);
+			
+			//add checkifmsgreceived for displaymsg
+			if(!checkMsgReceived(splitMsg[splitMsg.length-1])){
+				if(splitMsg[0].isEmpty()){
+					
+				}else if(splitMsg[0].equals("ack")){
+					m_connection.removeMessages(temp);
+				}else if(splitMsg[0].equals("qAlive")){
+					m_connection.sendChatMessage("isAlive", true);
+				}else{
+					if(splitMsg[0].equals("1")){
+						for(int i = 1; i < splitMsg.length-1; i++){
+							displayMsg += splitMsg[i] + " ";
+						}
+					}else if(splitMsg[0].equals("2")){
+						//String privateMsg = " whispers to ";
+						for(int i = 1; i < splitMsg.length-1; i++){
+							displayMsg += splitMsg[i] + " ";
+						}
+						//displayMsg += privateMsg;
+					}else if(splitMsg[0].equals("8")){
+						m_GUI.displayMessage("In chat now:");
+						for(int i = 1; i < splitMsg.length-1; i++){
+							displayMsg += splitMsg[i] + " ";
+						}
+					}else if(splitMsg[0].equals("9")){
+						for(int i = 1; i < splitMsg.length-1; i++){
+							displayMsg += splitMsg[i] + " ";
+						}
+					}
+					m_GUI.displayMessage(displayMsg);					
 				}
-				System.out.println("newstring is " + newString);
-				m_GUI.displayMessage(newString);
+				
 			}
-			
-			
+						
 			timeElapsed = System.currentTimeMillis() - millis;
-			if(timeElapsed > 1000){
+			if(timeElapsed > 500){
 				millis = System.currentTimeMillis();
 				m_connection.resendMsg();
 			}
 
 		} while (true);
+	}
+	
+	public boolean checkMsgReceived(String timestamp){
+		boolean found = false;
+		for (int i = 0; i < receivedMsg.size(); i++){
+			if(receivedMsg.get(i).equals(timestamp)){
+				found = true;
+			}
+		}
+		if(!found){
+			receivedMsg.add(timestamp);
+		}
+		return found;
 	}
 
 	/*
@@ -101,7 +143,7 @@ public class Client implements ActionListener {
 		// the check for everything is only done if the length of outMsg is > 0
 		String[] splitMsg = outMsg.split("\\s+");
 		if (outMsg.length() > 0) {
-			/*if (outMsg.substring(0, 1).equals("/")) {
+			if (outMsg.substring(0, 1).equals("/")) {
 				if (splitMsg[0].equals("/tell") || splitMsg[0].equals("/Tell")) {
 					outMsg = "2 " + m_name + " " + outMsg;
 				} else if (splitMsg[0].equals("/list") || splitMsg[0].equals("/List")) {
@@ -113,9 +155,9 @@ public class Client implements ActionListener {
 				}
 
 				// This is the broadcast
-			} else {*/
+			} else {
 				outMsg = "1 " + m_name + " " + outMsg;
-			//}
+			}
 
 			m_connection.sendChatMessage(outMsg, true);
 			m_GUI.clearInput();
