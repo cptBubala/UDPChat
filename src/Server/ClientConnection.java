@@ -24,7 +24,6 @@ public class ClientConnection {
 	private final int m_port;
 	private boolean m_connected = false;
 	ArrayList<String> sentMsg = new ArrayList<String>();
-	private ArrayList<String> allMessages = new ArrayList<String>();
 
 	public ClientConnection(String name, InetAddress address, int port) {
 		m_name = name;
@@ -38,9 +37,7 @@ public class ClientConnection {
 		double failure = generator.nextDouble();
 		DatagramPacket outPacket = null;
 		String msg = message;
-		// String msg = prepareMsg(message);
 		String[] msgArray = msg.split(" ");
-		// System.out.println("THIS IS IN BEGINNING OF SENDMESSAGE " + msg);
 		String tempmsg = "";
 
 		if (failure > TRANSMISSION_FAILURE_RATE) {
@@ -52,10 +49,7 @@ public class ClientConnection {
 						tempmsg += msgArray[i] + " ";
 					}
 				}
-
 				msg = tempmsg + " " + m_name + System.currentTimeMillis();
-
-				// System.out.println("Msg in sendMessage: " + msg);
 			}
 
 			// Sends a message to client using socket. Marshalls the message
@@ -63,30 +57,26 @@ public class ClientConnection {
 			outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_address, m_port);
 			try {
 				socket.send(outPacket);
-				System.out.println("Send: " + "'" + msg + "'");
 				boolean found = false;
 				for (int i = 0; i < sentMsg.size(); i++) {
 					if (sentMsg.get(i).equals(msg)) {
 						found = true;
 					}
 				}
+
+				// If msg isn't already in sentMsg it needs to be added
+				// but you don't want to add it twice or if an ack-msg.
 				if (msgArray.length > 0) {
 					if (!found && !msgArray[0].equals("ack")) {
 						sentMsg.add(msg);
-						// System.out.println("Added to sentMsg-array in if: " +
-						// msg);
 					}
 				}
-
-				/*
-				 * if (first) { sentMsg.add(message); }
-				 */
-
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
+			// if message not sent, same procedures still needed as in
+			// if-statement
 		} else {
 			if (first) {
 				if (msgArray[0].equals("8") || msgArray[0].equals("9") || msgArray[0].equals("qAlive")) {
@@ -109,38 +99,29 @@ public class ClientConnection {
 			if (msgArray.length > 0) {
 				if (!found && !msgArray[0].equals("ack")) {
 					sentMsg.add(msg);
-					// System.out.println("Added to sentMsg-array in else: " +
-					// msg);
 					System.out.println("Message lost in cyber.. ");
 				}
 			}
-
 		}
-
 	}
 
+	// When a sent message receives an ack - this needs to be removed from
+	// sentMsg-ArrayList
 	public void removeMessages(String message) {
 		String[] inMsg = message.split(" ");
 		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
-
 			if (sentMsgArray[sentMsgArray.length - 1].equals(inMsg[inMsg.length - 1])) {
-				// System.out.println("Size " + sentMsg.size() + " msg to
-				// delete: " + sentMsg.get(i));
-				sentMsg.remove(i); // Seems to work
-				// System.out.println("Removed msg " + sentMsg.size());
+				sentMsg.remove(i);
 				break;
 			}
-
 		}
 	}
 
+	// Used to resend messages that hasen't got an ack
 	public void resend(DatagramSocket socket) {
 		for (int i = 0; i < sentMsg.size(); i++) {
-			System.out.println("resending msg: " + sentMsg.get(i));
 			sendMessage(sentMsg.get(i), socket, false);
-			
-
 		}
 	}
 

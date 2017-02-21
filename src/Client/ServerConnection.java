@@ -26,7 +26,6 @@ public class ServerConnection {
 	private InetAddress m_serverAddress = null;
 	private int m_serverPort = -1;
 	private ArrayList<String> sentMsg = new ArrayList<String>();
-	private ArrayList<String> displayedMsg = new ArrayList<String>();
 
 	public ServerConnection(String hostName, int port) {
 		m_serverPort = port;
@@ -95,11 +94,11 @@ public class ServerConnection {
 		// Un-marshals message and put in inString
 		String inString = "";
 		boolean checkMsgReceived = false;
+
 		try {
 			m_socket.receive(inPacket);
 			checkMsgReceived = true;
 			inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
-			System.out.println("RCV: " + "'" + inString + "'");
 		} catch (IOException e) {
 			checkMsgReceived = false;
 		}
@@ -109,49 +108,25 @@ public class ServerConnection {
 			if (!inString.startsWith("ack")) {
 				sendAck(inString);
 			}
-			// inString = controlMsg(inString);
 		}
-
-		/*
-		 * else { inString = ""; }
-		 */
-		// System.out.println("Before returning inString in receiveChatMessage:
-		// " + inString);
-
-		String[] newStringArray = inString.split(" ");
-		/*
-		 * for(int i = 0; i < newStringArray.length - 1;i++){ newString =
-		 * newString + newStringArray[i] + " "; }
-		 */
-		// System.out.println("In receiveMsg: inString is " + inString);
-
-		/*
-		 * String checkIfDisplayed = showMessage(inString); for (int m = 0; m <
-		 * displayedMsg.size(); m++) { if
-		 * (checkIfDisplayed.equals(displayedMsg.get(m))) { System.out.println(
-		 * "Message already displayed " + checkIfDisplayed + " " +
-		 * displayedMsg.get(m)); inString = "??=)!!"; break; } }
-		 */
-
-		return inString; // fram hit verkar det fungera på första
-							// meddelandet att eerik has joined the chat.
-							// Sen bara ack?
+		return inString;
 	}
 
+	// Sends ack back to server
 	private void sendAck(String msg) {
 		if (!msg.equals("True")) {
 			String tempMsg = "ack" + " " + msg;
-			// System.out.println("tempMsg in sendAck " + tempMsg);
 			sendChatMessage(tempMsg, false);
 		}
 	}
 
-	// Sends message and adds it to arraylist
+	// Sends message and adds it to ArrayList sentMsg
 	public synchronized void sendChatMessage(String message, boolean first) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		String msg = "";
 		if (failure > TRANSMISSION_FAILURE_RATE) {
+			// first used to not add new timestamp if message is being resend
 			if (first) {
 				msg = message + " " + System.currentTimeMillis();
 			} else {
@@ -163,38 +138,33 @@ public class ServerConnection {
 					m_serverPort);
 			try {
 				m_socket.send(outPacket);
-				System.out.println("Send: " + "'" + msg + "'");
 				boolean found = false;
 				for (int i = 0; i < sentMsg.size(); i++) {
 					if (sentMsg.get(i).equals(msg)) {
 						found = true;
 					}
 				}
+				// If msg isn't already in sentMsg it needs to be added
+				// but you don't want to add it twice or if an ack-msg.
 				if (!found && !msgArray[0].equals("ack")) {
 					sentMsg.add(msg);
-					// System.out.println("Added to sentMsg-array in if: " +
-					// msg);
 				}
-
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
-			// If client sends chat message /leave (command to leave chat), that
-			// message gets a 4 in the beginning
-			// and that means client wants to leave. System.exit(0) shuts down
-			// window
+			/*
+			 * If client sends chat message /leave (command to leave chat), that
+			 * message gets a 4 in the beginning and that means client wants to
+			 * leave. System.exit(0) shuts down window
+			 */
 			String[] _outMessageArray = message.split(" ");
 			if (_outMessageArray[0].equals("4")) {
-				// System.out.println("Size of sentMsg right before shutdown: "
-				// + sentMsg.size());
-				for (int i = 0; i < sentMsg.size(); i++) {
-					// System.out.println(sentMsg.get(i));
-				}
 				System.exit(0);
 			}
 
+			// if message not sent, same procedures still needed as in
+			// if-statement
 		} else {
 			if (first) {
 				msg = message + " " + System.currentTimeMillis();
@@ -209,39 +179,28 @@ public class ServerConnection {
 			}
 			if (!found) {
 				sentMsg.add(msg);
-				// System.out.println("Added to sentMsg-array in else: " + msg);
 				System.out.println("Message lost in cyber.. ");
 			}
-
 		}
-
 	}
 
+	// When a sent message receives an ack - this needs to be removed from
+	// sentMsg-ArrayList
 	public synchronized void removeMessages(String message) {
 		String[] inMsg = message.split(" ");
 		for (int i = 0; i < sentMsg.size(); i++) {
 			String[] sentMsgArray = sentMsg.get(i).split(" ");
-			// System.out.println("sentMsgArray + inMsg '" +
-			// (sentMsgArray[sentMsgArray.length - 1]) + "'" + " '" +
-			// (inMsg[inMsg.length - 1]));
-
 			if (sentMsgArray[sentMsgArray.length - 1].equals(inMsg[inMsg.length - 1])) {
-				// System.out.println("Size " + sentMsg.size() + " msg to
-				// delete: " + sentMsg.get(i));
-				sentMsg.remove(i); // Seems to work
-				// System.out.println("Removed msg " + sentMsg.size());
+				sentMsg.remove(i);
 				break;
 			}
-
 		}
 	}
 
+	// Used to resend messages that hasen't got an ack
 	public synchronized void resendMsg() {
 		for (int i = 0; i < sentMsg.size(); i++) {
-			System.out.println("RESENDING IN CLIENT: " + sentMsg.get(i));
 			sendChatMessage(sentMsg.get(i), false);
-			System.out.println("RESENT!");
 		}
 	}
-
 }
