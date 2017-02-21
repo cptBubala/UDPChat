@@ -57,35 +57,59 @@ public class Client implements ActionListener {
 		do {		
 			String temp = m_connection.receiveChatMessage();
 			String displayMsg = "";
-			//System.out.println("DISPLAY?? " + temp);
+			System.out.println("DISPLAY: " + temp);
 			String[]splitMsg = temp.split(" ");
 			
 			// SPLIT MSG HERE? SO IT ONLY DISPLAYS VITAL INFO
 			
 			//String displayMsg = splitMsg[splitMsg.length-1];
 			//System.out.println("DISPLAY!! " + displayMsg);
+			boolean ack = false;
+			boolean isAlive = false;
+			if(splitMsg[0].equals("ack")){
+				m_connection.removeMessages(temp);
+				ack = true;
+				System.out.println("Removes in ListenToMSG " + "'" + temp + "' + splitMsg '" + temp +"'");
+			}
 			
+			if(splitMsg[0].equals("qAlive")){
+				m_connection.sendChatMessage("isAlive", true);
+				isAlive = true;
+			}
+			for(String s: splitMsg){
+				System.out.println("# " +  "'" + s + "'");
+			}
+			for(String ss: receivedMsg){
+				System.out.println("** " + "'" + ss + "'");
+			}
+			System.out.println(splitMsg);
 			//add checkifmsgreceived for displaymsg
-			if(!checkMsgReceived(splitMsg[splitMsg.length-1])){
+			if(!ack && !isAlive && !checkMsgReceived(splitMsg[splitMsg.length-1])){
+				System.out.println("Begin: " + temp);
 				if(splitMsg[0].isEmpty()){
-					
-				}else if(splitMsg[0].equals("ack")){
-					m_connection.removeMessages(temp);
-				}else if(splitMsg[0].equals("qAlive")){
-					m_connection.sendChatMessage("isAlive", true);
+					System.out.println("splitMsg empty");
 				}else{
 					if(splitMsg[0].equals("1")){
-						for(int i = 1; i < splitMsg.length-1; i++){
+						displayMsg = splitMsg[1] + ": ";
+						for(int i = 2; i < splitMsg.length-1; i++){
 							displayMsg += splitMsg[i] + " ";
 						}
 					}else if(splitMsg[0].equals("2")){
 						//String privateMsg = " whispers to ";
-						for(int i = 1; i < splitMsg.length-1; i++){
+						displayMsg = splitMsg[1] + " whispers to " + splitMsg[3] + ": ";
+						for(int i = 4; i < splitMsg.length - 1; i++){
 							displayMsg += splitMsg[i] + " ";
 						}
 						//displayMsg += privateMsg;
+					}else if(splitMsg[0].equals("4")){
+						String tempString = " has left the chat - ";
+						for(int i = 3; i < splitMsg.length-1; i++){
+							tempString += splitMsg[i] + " ";
+						}
+						displayMsg = splitMsg[1] + tempString;
 					}else if(splitMsg[0].equals("8")){
-						m_GUI.displayMessage("In chat now:");
+						//m_GUI.displayMessage("In chat now:");
+						displayMsg = "In chat now: ";
 						for(int i = 1; i < splitMsg.length-1; i++){
 							displayMsg += splitMsg[i] + " ";
 						}
@@ -93,10 +117,14 @@ public class Client implements ActionListener {
 						for(int i = 1; i < splitMsg.length-1; i++){
 							displayMsg += splitMsg[i] + " ";
 						}
+					}else{
+						System.out.println("Else: " + temp);
 					}
-					m_GUI.displayMessage(displayMsg);					
+					System.out.println("displayMsg: " + displayMsg);
+					m_GUI.displayMessage(displayMsg);
+					//m_GUI.displayMessage(splitMsg[splitMsg.length-1] + ": " +displayMsg);					
 				}
-				
+				System.out.println("End: " + temp);
 			}
 						
 			timeElapsed = System.currentTimeMillis() - millis;

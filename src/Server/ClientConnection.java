@@ -17,7 +17,7 @@ import java.util.Random;
  */
 public class ClientConnection {
 
-	static double TRANSMISSION_FAILURE_RATE = 0.1;
+	static double TRANSMISSION_FAILURE_RATE = 0.3;
 
 	private final String m_name;
 	private final InetAddress m_address;
@@ -38,23 +38,24 @@ public class ClientConnection {
 		double failure = generator.nextDouble();
 		DatagramPacket outPacket = null;
 		String msg = message;
-		//String msg = prepareMsg(message);
+		// String msg = prepareMsg(message);
 		String[] msgArray = msg.split(" ");
-		//System.out.println("THIS IS IN BEGINNING OF SENDMESSAGE " + msg);
+		// System.out.println("THIS IS IN BEGINNING OF SENDMESSAGE " + msg);
 		String tempmsg = "";
-		
+
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			if (first) {
-				if(msgArray[0].equals("8") || msgArray[0].equals("9") || msgArray[0].equals("qAlive")){
+				if (msgArray[0].equals("8") || msgArray[0].equals("9") || msgArray[0].equals("qAlive")) {
 					tempmsg = msg;
-				}else{
-					for(int i = 0; i < msgArray.length-1; i++){
+				} else {
+					for (int i = 0; i < msgArray.length - 1; i++) {
 						tempmsg += msgArray[i] + " ";
 					}
 				}
-				
-				msg = tempmsg + " " + System.currentTimeMillis();
-				//System.out.println("Msg in sendMessage: " + msg);
+
+				msg = tempmsg + " " + m_name + System.currentTimeMillis();
+
+				// System.out.println("Msg in sendMessage: " + msg);
 			}
 
 			// Sends a message to client using socket. Marshalls the message
@@ -62,6 +63,7 @@ public class ClientConnection {
 			outPacket = new DatagramPacket(msg.getBytes(), msg.getBytes().length, m_address, m_port);
 			try {
 				socket.send(outPacket);
+				System.out.println("Send: " + "'" + msg + "'");
 				boolean found = false;
 				for (int i = 0; i < sentMsg.size(); i++) {
 					if (sentMsg.get(i).equals(msg)) {
@@ -71,7 +73,8 @@ public class ClientConnection {
 				if (msgArray.length > 0) {
 					if (!found && !msgArray[0].equals("ack")) {
 						sentMsg.add(msg);
-						//System.out.println("Added to sentMsg-array in if: " + msg);
+						// System.out.println("Added to sentMsg-array in if: " +
+						// msg);
 					}
 				}
 
@@ -85,6 +88,18 @@ public class ClientConnection {
 			}
 
 		} else {
+			if (first) {
+				if (msgArray[0].equals("8") || msgArray[0].equals("9") || msgArray[0].equals("qAlive")) {
+					tempmsg = msg;
+				} else {
+					for (int i = 0; i < msgArray.length - 1; i++) {
+						tempmsg += msgArray[i] + " ";
+					}
+				}
+
+				msg = tempmsg + " " + m_name + System.currentTimeMillis();
+			}
+
 			boolean found = false;
 			for (int i = 0; i < sentMsg.size(); i++) {
 				if (sentMsg.get(i).equals(msg)) {
@@ -94,7 +109,8 @@ public class ClientConnection {
 			if (msgArray.length > 0) {
 				if (!found && !msgArray[0].equals("ack")) {
 					sentMsg.add(msg);
-					//System.out.println("Added to sentMsg-array in else: " + msg);
+					// System.out.println("Added to sentMsg-array in else: " +
+					// msg);
 					System.out.println("Message lost in cyber.. ");
 				}
 			}
@@ -103,27 +119,28 @@ public class ClientConnection {
 
 	}
 
-	public void addMsgToArray(String msg) {
-		allMessages.add(msg);
-	}
-
 	public void removeMessages(String message) {
 		String[] inMsg = message.split(" ");
 		for (int i = 0; i < sentMsg.size(); i++) {
-			// String[] sentMsgArray = sentMsg.get(i).split(" ");
-			if (sentMsg.get(i).endsWith(inMsg[inMsg.length - 1])) {
-				System.out.println("Sent msg " + sentMsg.get(i) + " and inMsgArray - " + inMsg[inMsg.length - 1]);
-				// System.out.println("Removed msg " + sentMsg.size() + " " +
-				// sentMsgArray[sentMsgArray.length-1]);
-				sentMsg.remove(i);
+			String[] sentMsgArray = sentMsg.get(i).split(" ");
+
+			if (sentMsgArray[sentMsgArray.length - 1].equals(inMsg[inMsg.length - 1])) {
+				// System.out.println("Size " + sentMsg.size() + " msg to
+				// delete: " + sentMsg.get(i));
+				sentMsg.remove(i); // Seems to work
+				// System.out.println("Removed msg " + sentMsg.size());
 				break;
 			}
+
 		}
 	}
 
 	public void resend(DatagramSocket socket) {
 		for (int i = 0; i < sentMsg.size(); i++) {
+			System.out.println("resending msg: " + sentMsg.get(i));
 			sendMessage(sentMsg.get(i), socket, false);
+			
+
 		}
 	}
 

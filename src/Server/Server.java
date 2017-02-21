@@ -69,12 +69,14 @@ public class Server {
 		DatagramPacket inPacket = new DatagramPacket(m_buf, m_buf.length);
 		// Used to send a marshalled message
 		DatagramPacket outPacket;
-
+		String inString = "";
 		do {
 			// Used so that not the same message is re-used again after 5 sec
 			boolean checkMsgReceived = false;
 			try {
 				m_socket.receive(inPacket);
+				inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
+				System.out.println("RCV: " + "'" + inString + "'");
 				checkMsgReceived = true;
 			} catch (IOException e) {
 				// Shows that no message has been received since the last one
@@ -106,7 +108,8 @@ public class Server {
 							m_connectedClients.remove(i);
 						}
 					}
-
+					
+					
 					// Server sends question to all clients to check if they are
 					// alive using broadcast
 					broadcast("qAlive");
@@ -125,16 +128,17 @@ public class Server {
 			}
 
 			String _outString = "";
+			String ack_outString = "";
 			String handshake = "False";
 			// Put in-package in a string
-			String inString = new String(inPacket.getData(), 0, inPacket.getLength()).trim();
+			
 			// Put inString in the array, splits at, and removes, space
 			String[] _inStringArray = inString.split("\\s+");
-			for (int i = 0; i < m_connectedClients.size(); i++) {
+			/*for (int i = 0; i < m_connectedClients.size(); i++) {
 				if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 					m_connectedClients.get(i).addMsgToArray(inString);
 				}
-			}
+			}*/
 			/*
 			 * if(inString.startsWith("ack")){
 			 * ClientConnection.checkMsg(inString); }
@@ -154,18 +158,30 @@ public class Server {
 			}
 
 			/********** REMOVE ACK *********/
-
+			boolean ack = false;
 			if (_inStringArray[0].equals("ack") && checkMsgReceived) {
 				for (int i = 0; i < m_connectedClients.size(); i++) {
 					m_connectedClients.get(i).removeMessages(inString);
+					ack = true;
 				}
 
+			}
+			
+			/**************** RESENDING MESSAGES *****************/
+			msg_timeElapsed = System.currentTimeMillis() - msg_millis;
+			if (msg_timeElapsed > 500) {
+				msg_millis = System.currentTimeMillis();
+				for (int i = 0; i < m_connectedClients.size(); i++) {
+					m_connectedClients.get(i).resend(m_socket);
+					//System.out.println("Resending msgs");
+				}
 			}
 
 			/************* IF MSG NOT RECEIVED ****************/
 			
-			if (!checkMsgReceived(_inStringArray[_inStringArray.length - 1])) {
-
+			if (!ack && !checkMsgReceived(_inStringArray[_inStringArray.length - 1])) {
+				System.out.println("!checkMsgReceived " + _inStringArray[_inStringArray.length - 1]);
+				
 				/********** HANDSHAKE **********/
 
 				if (_inStringArray[0].equals("0") && checkMsgReceived) {
@@ -214,19 +230,30 @@ public class Server {
 
 				// "1" means broadcast
 				else if (_inStringArray[0].equals("1") && checkMsgReceived) {
-					String ack_outString = "ack" + " " + inString;
+					//ack_outString = "ack" + " " + _inStringArray[_inStringArray.length-1] + " " + _inStringArray[_inStringArray.length-1];
+					ack_outString = "ack" + " " + inString;
 					sendPrivateMessage(ack_outString, _inStringArray[1]);
-					//System.out.print("This is in outstring: " + inString + " and this is ack_oustring: " + ack_outString);
+					//System.out.println(ack_outString);
+					//System.out.print("This is inString: " + inString);
 					// broadcast(_outString);
-					for (int i = 0; i < m_connectedClients.size(); i++) {
+					for(ClientConnection cc: m_connectedClients){
+						if (cc.hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
+							// Gets the sender so it is possible to set its
+							// connected true
+							cc.setConnected(true);
+						}
+					}
+					
+					/*for (int i = 0; i < m_connectedClients.size(); i++) {
 						if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 							// Gets the sender so it is possible to set its
 							// connected true
 							m_connectedClients.get(i).setConnected(true);
 						}
-					}
+					}*/
 
 					for (int i = 0; i < m_connectedClients.size(); i++) {
+						System.out.println("SIZE OF CLIENTARRAY: " + m_connectedClients.size());
 						broadcast(inString);
 					}
 
@@ -237,9 +264,10 @@ public class Server {
 				// if _inStringArray[0] equals 2 this means that the received
 				// message is private
 				if (_inStringArray[0].equals("2") && checkMsgReceived) {
-					_outString = "ack" + " " + inString;
+					ack_outString = "ack" + " " + inString;
 
-					sendPrivateMessage(_outString, _inStringArray[1]);
+					sendPrivateMessage(ack_outString, _inStringArray[1]);
+					System.out.println(ack_outString);
 					ClientConnection c;
 					for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
 						c = itr.next();
@@ -267,8 +295,9 @@ public class Server {
 
 				// "3" means that the message is a /list-request
 				else if (_inStringArray[0].equals("3") && checkMsgReceived) {
-					_outString = "ack" + " " + _outString;
-					sendPrivateMessage(_outString, _inStringArray[1]);
+					ack_outString = "ack" + " " + inString;
+					sendPrivateMessage(ack_outString, _inStringArray[1]);
+					System.out.println(ack_outString);
 					for (int i = 0; i < m_connectedClients.size(); i++) {
 						if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
 							// Gets the sender so it is possible to set its
@@ -276,9 +305,9 @@ public class Server {
 							m_connectedClients.get(i).setConnected(true);
 						}
 					}
-					_outString = "";
+					_outString = "8 ";
 					for (int i = 0; i < m_connectedClients.size(); i++) {
-						_outString += "8" + " " + m_connectedClients.get(i).getName() + " ";
+						_outString += m_connectedClients.get(i).getName() + " ";
 						// Send each connectedClient back to the client who
 						// wrote
 						// /list
@@ -292,38 +321,35 @@ public class Server {
 
 				// "4" means /leave-request from client
 				else if (_inStringArray[0].equals("4") && checkMsgReceived) {
-					_outString = "ack" + " " + _outString;
+					ack_outString = "ack" + " " + _outString;
 					//System.out.print(_outString);
-					sendPrivateMessage(_outString, _inStringArray[1]);
+					sendPrivateMessage(ack_outString, _inStringArray[1]);
+					System.out.println(ack_outString);
+					_outString = "";
+					for (int i = 0; i < m_connectedClients.size(); i++) {
+						_outString += "9" + " " + _inStringArray[1] + " left the chat - ";
+					}
 					for (int i = 0; i < m_connectedClients.size(); i++) {
 						if (m_connectedClients.get(i).hasAddressPlusPort(inPacket.getAddress(), inPacket.getPort())) {
-							/*
-							 * For-loop used to get the entire leave-message
-							 * that a client can leave if wanted (like:
-							 * "/leave Good bye")
-							 */
-							/*
-							 * for (int j = 3; j < _inStringArray.length; j++) {
-							 * _outString += _inStringArray[j] + " "; }
-							 */
+						/*	String tempString = "";
+							for(int m = 2; i < m; m++){
+								tempString += _inStringArray[i] + " ";
+							}*/
+							
 							// Broadcast leaving message to all clients
-							broadcast(_inStringArray[1] + " left the chat - " + "' " + inString + "'");
+							broadcast(inString);
 							// Removes client from arraylist
 							m_connectedClients.remove(i);
 						}
 					}
+					
+					
 				} else {
 
 				}
 			}
 
-			msg_timeElapsed = System.currentTimeMillis() - msg_millis;
-			if (msg_timeElapsed > 500) {
-				msg_millis = System.currentTimeMillis();
-				for (int i = 0; i < m_connectedClients.size(); i++) {
-					m_connectedClients.get(i).resend(m_socket);
-				}
-			}
+			
 
 		} while (true);
 	}
@@ -371,11 +397,17 @@ public class Server {
 
 	// Used to send broadcast message
 	public void broadcast(String message) {
-		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+		for(ClientConnection cc: m_connectedClients){
+		
+			System.out.print("*");
+			cc.sendMessage(message, m_socket, true);
+			
+		}
+	/*	for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
 			// Sends message to all clients in arraylist
 			//System.out.println("BROADCAST " + message);
 			itr.next().sendMessage(message, m_socket, true);
-
-		}
+			System.out.print("*");
+		}*/
 	}
 }
