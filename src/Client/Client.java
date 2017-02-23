@@ -40,7 +40,7 @@ public class Client implements ActionListener {
 		m_connection = new ServerConnection(hostName, port);
 
 		// Handshake returns true if connection has been made
-		// Now we can listen for server messages
+		// Now we can listen for server messages.
 		if (m_connection.handshake(m_name)) {
 			listenForServerMessages();
 		} else {
